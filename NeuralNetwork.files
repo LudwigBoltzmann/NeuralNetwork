@@ -1,0 +1,11 @@
+include/ActivationFunction.hpp
+include/GradientDescent.hpp
+include/Layer.hpp
+include/LossFunctions.hpp
+include/MNIST/mnist_reader.hpp
+include/MNIST/mnist_reader_common.hpp
+include/MNIST/mnist_reader_less.hpp
+include/MNIST/mnist_utils.hpp
+include/NeuralNetwork.hpp
+include/Type.hpp
+src/main.cpp
