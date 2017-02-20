@@ -16,3 +16,6 @@ __pycache__
 *.includes
 *.cmake
 *.user
+CMakeCache.txt
+NeuralNetwork.*
+NeuralNetwork.*
