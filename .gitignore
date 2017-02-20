@@ -11,7 +11,7 @@ __pycache__
 .cproject
 .pydevproject
 .sync.ffs_db
-.config
-.files
-.includes
-.cmake
+*.config
+*.files
+*.includes
+*.cmake
