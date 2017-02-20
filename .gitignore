@@ -1,6 +1,9 @@
+*.files*
+NeuralNetwork.files
 CMakeFiles/
 CMakeCache.txt
 *.user
 *.files
 *.cmake
 *.includes
+
