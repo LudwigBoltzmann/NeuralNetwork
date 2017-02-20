@@ -1,3 +1,5 @@
+*.files
+*.includes
 build*
 .*.swp
 RELEASE-VERSION
@@ -12,8 +14,6 @@ __pycache__
 .pydevproject
 .sync.ffs_db
 *.config
-*.files
-*.includes
 *.cmake
 *.user
 CMakeCache.txt
