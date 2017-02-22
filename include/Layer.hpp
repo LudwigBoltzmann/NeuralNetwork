@@ -13,6 +13,7 @@ namespace DeepLearning
     public:
         enum E_functionType { T_MSE, T_CEE };
         enum O_filterType { T_SOFTMAX, T_IDENTITY };
+        enum G_descentType { T_SGD, T_MOMENTUM, T_ADA, T_ADAM };
     protected:
         PrimitiveLayer*     m_preLayer;
         PrimitiveLayer*     m_postLayer;
@@ -27,21 +28,27 @@ namespace DeepLearning
         rVec                m_bGrad;
         rVec                m_delta;
         double              m_learningRate;
+        double              m_momentum;
         E_functionType      m_errorFunctionType;
         O_filterType        m_outputFilterType;
+        G_descentType       m_gradientDescentType;
 
     public:
         PrimitiveLayer()
             : m_preLayer(NULL), m_postLayer(NULL), m_numInput(0), m_numOutput(0),
               m_input(), m_output(), m_outputPtr(NULL), m_weights(), m_bias(),
-              m_wGrad(), m_bGrad(), m_delta(), m_learningRate(0.001),
-              m_errorFunctionType(T_MSE), m_outputFilterType(T_IDENTITY)
+              m_wGrad(), m_bGrad(), m_delta(),
+              m_learningRate(0.001), m_momentum(0.1),
+              m_errorFunctionType(T_MSE), m_outputFilterType(T_IDENTITY),
+              m_gradientDescentType(T_SGD)
         {}
         PrimitiveLayer(int nInput, int nOutput)
             : m_preLayer(NULL), m_postLayer(NULL), m_numInput(nInput), m_numOutput(nOutput),
               m_input(), m_output(), m_outputPtr(NULL), m_weights(), m_bias(),
-              m_wGrad(), m_bGrad(), m_delta(), m_learningRate(0.001),
-              m_errorFunctionType(T_MSE), m_outputFilterType(T_IDENTITY)
+              m_wGrad(), m_bGrad(), m_delta(),
+              m_learningRate(0.001), m_momentum(0.1),
+              m_errorFunctionType(T_MSE), m_outputFilterType(T_IDENTITY),
+              m_gradientDescentType(T_SGD)
         {
             init(nInput, nOutput);
         }
@@ -54,12 +61,14 @@ namespace DeepLearning
         rVec&               getBias(void) { return m_bias; }
         rVec&               getDelta(void) { return m_delta; }
         double&             getLearningRate(void) { return m_learningRate; }
+        double&             getMomentum(void) { return m_momentum; }
 
         void connectPostLayer(PrimitiveLayer* postLayer) {
             m_postLayer = postLayer;
             m_postLayer->getPreLayer() = this;
         }
 
+        void setDescentType(G_descentType type)     { m_gradientDescentType = type; if(type != T_MOMENTUM) m_momentum = 0; }
         void setErrorFunction(E_functionType type)  { m_errorFunctionType = type; }
         void setOutputFilter(O_filterType type)     { m_outputFilterType = type; }
         void init(int nInput, int nOutput);
@@ -86,11 +95,12 @@ namespace DeepLearning
         randomGenerator rg;
         //// temporary weight initialization
         int n_weight = m_weights.data().size();
+        double scale = 1.0;
         for(int i = 0; i < n_weight; ++i) {
-            m_weights.data()[i] = rg.boxMuller();
+            m_weights.data()[i] = rg.boxMuller() / scale;
         }
         for(int i = 0; i < m_numOutput; ++i)
-            m_bias[i] = rg.boxMuller();
+            m_bias[i] = rg.boxMuller() / scale;
     }
 
 
@@ -113,7 +123,7 @@ namespace DeepLearning
     void Layer<AF>::feedForward(double* input, int N) {
         m_input.assign(input, input + N);
 
-        for(int i = 0; i < m_numOutput; ++i) {
+        cilk_for(int i = 0; i < m_numOutput; ++i) {
             double output = 0.0;
             for(int j = 0; j < m_numInput; ++j) {
                 output += m_input[j] * m_weights[j][i];
@@ -132,7 +142,7 @@ namespace DeepLearning
 
         m_input.assign(m_preLayer->getOutput().begin(), m_preLayer->getOutput().end());
 
-        for(int i = 0; i < m_numOutput; ++i) {
+        cilk_for(int i = 0; i < m_numOutput; ++i) {
             double output = 0.0;
             for(int j = 0; j < m_numInput; ++j) {
                 output += m_input[j] * m_weights[j][i];
@@ -168,7 +178,7 @@ namespace DeepLearning
         int numOutput = postLayerWeights.ncol();
         int numInput  = postLayerWeights.nrow();
 
-        for(int j = 0; j < numInput; ++j) {
+        cilk_for(int j = 0; j < numInput; ++j) {
             double delta = 0;
             for(int i = 0; i < numOutput; ++i) {
                 delta += postLayerWeights[j][i] * postLayerDelta[i];
@@ -180,13 +190,50 @@ namespace DeepLearning
     template <typename AF>
     void Layer<AF>::updateWeights()
     {
-        for(int j = 0; j < m_numOutput; ++j) {
-            double delta = m_delta[j];
-            for(int i = 0; i < m_numInput; ++i) {
-                m_weights[i][j] += m_learningRate * delta * AF::getActivationGradient(m_input[i]) * m_input[i];
+        switch (m_gradientDescentType) {
+        case T_SGD:
+            cilk_for(int j = 0; j < m_numOutput; ++j) {
+                double delta = m_delta[j];
+                for(int i = 0; i < m_numInput; ++i) {
+                    m_weights[i][j] += m_learningRate * delta * AF::getActivationGradient(m_input[i]) * m_input[i];
+                }
+                m_bias[j] += m_learningRate * delta * AF::getActivationGradient(1.0);
             }
-            m_bias[j] += m_learningRate * delta * AF::getActivationGradient(1.0);
+            break;
+        case T_MOMENTUM:
+            cilk_for(int j = 0; j < m_numOutput; ++j) {
+                double delta = m_delta[j];
+                for(int i = 0; i < m_numInput; ++i) {
+                    m_wGrad[i][j] = m_momentum * m_wGrad[i][j] + m_learningRate * delta * AF::getActivationGradient(m_input[i]) * m_input[i];
+                    m_weights[i][j] += m_wGrad[i][j];
+                }
+                m_bGrad[j] = m_momentum * m_bGrad[j] + m_learningRate * delta * AF::getActivationGradient(1.0);
+                m_bias[j] += m_bGrad[j];
+            }
+            break;
+        case T_ADA:
+        {
+            double h = 0;
+            for(int j = 0; j < m_numOutput; ++j) {
+                double delta = m_delta[j];
+                for(int i = 0; i < m_numInput; ++i) {
+                    m_wGrad[i][j] = delta * AF::getActivationGradient(m_input[i]) * m_input[i];
+                    h += m_wGrad[i][j] * m_wGrad[i][j];
+                }
+                m_bGrad[j] = delta * AF::getActivationGradient(1.0);
+                h += m_bGrad[j] * m_bGrad[j];
+            }
+            m_momentum += h;
+            cilk_for(int j = 0; j < m_numOutput; ++j) {
+                for(int i = 0; i < m_numInput; ++i) {
+                    m_weights[i][j] += m_learningRate * m_wGrad[i][j] / sqrt(m_momentum);
+                }
+                m_bias[j] += m_learningRate * m_bGrad[j] / sqrt(m_momentum);
+            }
+            break;
         }
+        }
+
     }
 
     template <typename AF>

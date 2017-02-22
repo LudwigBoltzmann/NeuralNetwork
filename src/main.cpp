@@ -173,8 +173,164 @@ void trainTest()
     std::cout<<std::endl<<"Test train Done"<<std::endl<<std::endl;
 }
 
+void mnistTest()
+{
+    std::cout<<"MNIST test start"<<std::endl;
+    std::vector<std::vector<uint8_t>> trainImage =
+            mnist::read_mnist_image_file("./MNISTSet/train-images-idx3-ubyte");
+    std::vector<std::vector<uint8_t>> testImage =
+            mnist::read_mnist_image_file("./MNISTSet/t10k-images-idx3-ubyte");
+    std::vector<uint8_t>    trainLabel =
+            mnist::read_mnist_label_file("./MNISTSet/train-labels-idx1-ubyte");
+    std::vector<uint8_t>    testLabel =
+            mnist::read_mnist_label_file("./MNISTSet/t10k-labels-idx1-ubyte");
+
+    std::cout<<"the number of train set = "<<trainImage.size()<<std::endl;
+    std::cout<<"the number of test set  = "<<testImage.size()<<std::endl;
+
+    Layer<Sigmoid> layer0;
+    Layer<Sigmoid> layer1;
+    Layer<Sigmoid> layer2;
+    Layer<Sigmoid> layer3;
+    layer0.init(784,784);
+    layer1.init(784,512);
+    layer2.init(512,1024);
+    layer3.init(1024,10);
+
+    layer0.connectPostLayer(&layer1);
+    layer1.connectPostLayer(&layer2);
+    layer2.connectPostLayer(&layer3);
+
+    layer0.getLearningRate() = 0.0001;
+    layer1.getLearningRate() = 0.001;
+    layer2.getLearningRate() = 0.01;
+    layer3.getLearningRate() = 0.1;
+
+    layer0.getMomentum() = 0.1;
+    layer1.getMomentum() = 0.1;
+    layer2.getMomentum() = 0.1;
+    layer3.getMomentum() = 0.1;
+
+    Layer<Sigmoid>::G_descentType type = Layer<Sigmoid>::T_SGD;
+    layer0.setDescentType(type);
+    layer1.setDescentType(type);
+    layer2.setDescentType(type);
+    layer3.setDescentType(type);
+    layer0.setErrorFunction(Layer<Sigmoid>::T_MSE);
+    layer1.setErrorFunction(Layer<Sigmoid>::T_MSE);
+    layer2.setErrorFunction(Layer<Sigmoid>::T_MSE);
+    layer3.setErrorFunction(Layer<Sigmoid>::T_MSE);
+    layer0.setOutputFilter(Layer<Sigmoid>::T_SOFTMAX);
+    layer1.setOutputFilter(Layer<Sigmoid>::T_SOFTMAX);
+    layer2.setOutputFilter(Layer<Sigmoid>::T_SOFTMAX);
+    layer3.setOutputFilter(Layer<Sigmoid>::T_SOFTMAX);
+
+
+    double input[784];
+    double target[10];
+    double average = 0.0;
+
+    /// pre-train
+    for(int iter = 0; iter < 10; ++iter)
+    for(int i = 0; i < 100; ++i) {
+        for(int j = 0; j < 784; ++j)
+            input[j] = trainImage[i][j];
+        for(int j = 0; j < 10; ++j)
+            target[j] = 0;
+        target[trainLabel[i]] = 1;
+        layer0.feedForward(input,784);
+        layer1.feedForward();
+        layer2.feedForward();
+        layer3.feedForward();
+
+        layer3.backPropagation(target,10);
+        layer2.backPropagation();
+        layer1.backPropagation();
+        layer0.backPropagation();
+
+        layer0.updateWeights();
+        layer1.updateWeights();
+        layer2.updateWeights();
+        layer3.updateWeights();
+
+        average += layer3.loss(10,layer3.getOutput().data(),target);
+
+        if((i+1)%100 == 0) {
+            std::cout<<"epoch = "<<i+1<<" "<<average / 100<<std::endl;
+            average = 0.0;
+        }
+    }
+
+    /// train
+    for(int i = 0; i < trainImage.size(); ++i) {
+        for(int j = 0; j < 784; ++j)
+            input[j] = trainImage[i][j];
+        for(int j = 0; j < 10; ++j)
+            target[j] = 0;
+        target[trainLabel[i]] = 1;
+        layer0.feedForward(input,784);
+        layer1.feedForward();
+        layer2.feedForward();
+        layer3.feedForward();
+
+        layer3.backPropagation(target,10);
+        layer2.backPropagation();
+        layer1.backPropagation();
+        layer0.backPropagation();
+
+        layer0.updateWeights();
+        layer1.updateWeights();
+        layer2.updateWeights();
+        layer3.updateWeights();
+
+        average += layer3.loss(10,layer3.getOutput().data(),target);
+
+        if((i+1)%100 == 0) {
+            std::cout<<"epoch = "<<i+1<<" "<<average / 100<<std::endl;
+            average = 0.0;
+        }
+
+    }
+
+    int count = 0;
+    /// test
+    for(int i = 0; i < testImage.size(); ++i) {
+        for(int j = 0; j < 784; ++j)
+            input[j] = testImage[i][j];
+
+        layer0.feedForward(input,784);
+        layer1.feedForward();
+        layer2.feedForward();
+        layer3.feedForward();
+
+        int max = -1;
+        double maxval = 0.0;
+        for(int j = 0; j < 10; ++j) {
+            if(maxval < layer3.getOutput()[j]) {
+                maxval = layer3.getOutput()[j];
+                max = j;
+            }
+        }
+
+        std::cout<<max<<" "<<(int)testLabel[i];
+        if(max == (int)testLabel[i]) {
+            std::cout<<"  Correct"<<std::endl;
+            count++;
+        }
+        else                 std::cout<<"  FAIL"<<std::endl;
+    }
+
+    std::cout<<"Accuracy = "<<(double)count / testImage.size() * 100.0<<"%"<<std::endl;
+
+
+
+    std::cout<<"MNIST test done"<<std::endl;
+}
+
 int main(int argc, char *argv[])
 {
+
+    __cilkrts_set_param("nworkers","4");
     std::cout<<"Hello Neural Network!"<<std::endl;
 
     /// test Train
@@ -187,9 +343,9 @@ int main(int argc, char *argv[])
         multiLayerTrain();
     }
 
-    /// test matrix solve regression test
+    /// test MNIST
     {
-        matrixSolveRegressionTest();
+        mnistTest();
     }
 
     return 0;
