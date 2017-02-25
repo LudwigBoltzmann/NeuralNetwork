@@ -2,7 +2,7 @@
 #define NEURALNETWORK_H
 
 #include "Type.hpp"
-#include "Layer.hpp"
+#include "ArtificialNeuralNetwork.hpp"
 
 namespace DeepLearning
 {

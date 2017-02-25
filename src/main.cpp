@@ -1,7 +1,13 @@
 #include <iostream>
 #include <cilk/cilk.h>
 #include <cilk/cilk_api.h>
-#include "include/Layer.hpp"
+
+
+/// load ANN
+#include "include/ArtificialNeuralNetwork.hpp"
+/// load CNN
+#include "include/ConvolutionalNeuralNetwork.hpp"
+
 #include "include/ActivationFunction.hpp"
 #include "include/MNIST/mnist_reader_less.hpp"
 #include "include/LossFunctions.hpp"
@@ -21,9 +27,9 @@ void multiLayerTrain()
     double input[2] = { 0.6, 0.9 };
     double target[3] = { 1, 0.3, 0.6 };
     std::cout<<std::endl<<"Test multilayer Train"<<std::endl<<std::endl;
-    DeepLearning::Layer<DeepLearning::Sigmoid> layer0;
-    DeepLearning::Layer<DeepLearning::Sigmoid> layer1;
-    DeepLearning::Layer<DeepLearning::Naive> layer2;
+    DeepLearning::ANN<DeepLearning::Sigmoid> layer0;
+    DeepLearning::ANN<DeepLearning::Sigmoid> layer1;
+    DeepLearning::ANN<DeepLearning::Naive> layer2;
 
     layer0.init(2,5);
     layer1.init(5,7);
@@ -91,10 +97,10 @@ void matrixSolveRegressionTest()
     }
 
     std::cout<<std::endl<<"Test matrix solve"<<std::endl<<std::endl;
-    DeepLearning::Layer<DeepLearning::Naive> layer0;
-    DeepLearning::Layer<DeepLearning::Naive> layer1;
-    DeepLearning::Layer<DeepLearning::Naive> layer2;
-    DeepLearning::Layer<DeepLearning::Naive> layer3;
+    DeepLearning::ANN<DeepLearning::Naive> layer0;
+    DeepLearning::ANN<DeepLearning::Naive> layer1;
+    DeepLearning::ANN<DeepLearning::Naive> layer2;
+    DeepLearning::ANN<DeepLearning::Naive> layer3;
 
     layer0.init(3,3);
     layer1.init(3,3);
@@ -155,7 +161,7 @@ void trainTest()
     double input[2] = { 0.6, 0.9 };
     double target[3] = { 1, 0.3, 0.6 };
     std::cout<<std::endl<<"Test train"<<std::endl<<std::endl;
-    DeepLearning::Layer<DeepLearning::Naive> layer;
+    DeepLearning::ANN<DeepLearning::Naive> layer;
     layer.init(2,3);
     layer.getLearningRate() = 0.1;
 
@@ -188,10 +194,10 @@ void mnistTest()
     std::cout<<"the number of train set = "<<trainImage.size()<<std::endl;
     std::cout<<"the number of test set  = "<<testImage.size()<<std::endl;
 
-    Layer<Sigmoid> layer0;
-    Layer<Sigmoid> layer1;
-    Layer<Sigmoid> layer2;
-    Layer<Sigmoid> layer3;
+    ANN<Sigmoid> layer0;
+    ANN<Sigmoid> layer1;
+    ANN<Sigmoid> layer2;
+    ANN<Sigmoid> layer3;
     layer0.init(784,784);
     layer1.init(784,512);
     layer2.init(512,1024);
@@ -211,19 +217,19 @@ void mnistTest()
     layer2.getMomentum() = 0.1;
     layer3.getMomentum() = 0.1;
 
-    Layer<Sigmoid>::G_descentType type = Layer<Sigmoid>::T_SGD;
+    ANN<Sigmoid>::G_descentType type = ANN<Sigmoid>::T_SGD;
     layer0.setDescentType(type);
     layer1.setDescentType(type);
     layer2.setDescentType(type);
     layer3.setDescentType(type);
-    layer0.setErrorFunction(Layer<Sigmoid>::T_MSE);
-    layer1.setErrorFunction(Layer<Sigmoid>::T_MSE);
-    layer2.setErrorFunction(Layer<Sigmoid>::T_MSE);
-    layer3.setErrorFunction(Layer<Sigmoid>::T_MSE);
-    layer0.setOutputFilter(Layer<Sigmoid>::T_SOFTMAX);
-    layer1.setOutputFilter(Layer<Sigmoid>::T_SOFTMAX);
-    layer2.setOutputFilter(Layer<Sigmoid>::T_SOFTMAX);
-    layer3.setOutputFilter(Layer<Sigmoid>::T_SOFTMAX);
+    layer0.setErrorFunction(ANN<Sigmoid>::T_MSE);
+    layer1.setErrorFunction(ANN<Sigmoid>::T_MSE);
+    layer2.setErrorFunction(ANN<Sigmoid>::T_MSE);
+    layer3.setErrorFunction(ANN<Sigmoid>::T_MSE);
+    layer0.setOutputFilter(ANN<Sigmoid>::T_SOFTMAX);
+    layer1.setOutputFilter(ANN<Sigmoid>::T_SOFTMAX);
+    layer2.setOutputFilter(ANN<Sigmoid>::T_SOFTMAX);
+    layer3.setOutputFilter(ANN<Sigmoid>::T_SOFTMAX);
 
 
     double input[784];
