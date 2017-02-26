@@ -11,7 +11,6 @@
 #include "include/ActivationFunction.hpp"
 #include "include/MNIST/mnist_reader_less.hpp"
 #include "include/LossFunctions.hpp"
-#include "include/GradientDescent.hpp"
 
 #include "mkl.h"
 
@@ -45,11 +44,13 @@ void multiLayerTrain()
     std::cout<<"Epoch : "<<-1<<"\ttarget = "<<target[0]<<" "<<target[1]<<" "<<target[2]<<std::endl;
 
     for(int i = 0; i < 100; ++i) {
-        layer0.feedForward(input,2);
+        int two = 2;
+        int three = 3;
+        layer0.feedForward(input,&two);
         layer1.feedForward();
         layer2.feedForward();
 
-        layer2.backPropagation(target,3);
+        layer2.backPropagation(target,&three);
         layer1.backPropagation();
         layer0.backPropagation();
 
@@ -117,12 +118,13 @@ void matrixSolveRegressionTest()
     layer3.getLearningRate() = 0.000015;
 
     for(int i = 0; i < num_training_Data; ++i) {
-        layer0.feedForward(input + i * 3, 3);
+        int three = 3;
+        layer0.feedForward(input + i * 3, &three);
         layer1.feedForward();
         layer2.feedForward();
         layer3.feedForward();
 
-        layer3.backPropagation(target + i * 3, 3);
+        layer3.backPropagation(target + i * 3, &three);
         layer2.backPropagation();
         layer1.backPropagation();
         layer0.backPropagation();
@@ -146,7 +148,8 @@ void matrixSolveRegressionTest()
 
     std::cout<<"Answer = "<<answer[0]<<" "<<answer[1]<<" "<<answer[2]<<std::endl;
 
-    layer0.feedForward(validation_rhs, 3);
+    int three = 3;
+    layer0.feedForward(validation_rhs, &three);
     layer1.feedForward();
     layer2.feedForward();
     layer3.feedForward();
@@ -167,9 +170,11 @@ void trainTest()
 
     std::cout<<"Epoch : "<<0<<" target = "<<target[0]<<" "<<target[1]<<" "<<target[2]<<std::endl;
 
+    int two = 2;
+    int three = 3;
     for(int i = 0; i < 100; ++i) {
-        layer.feedForward(input,2);
-        layer.backPropagation(target,3);
+        layer.feedForward(input,&two);
+        layer.backPropagation(target,&three);
         layer.updateWeights();
 
         rVec& output = layer.getOutput();
@@ -236,6 +241,8 @@ void mnistTest()
     double target[10];
     double average = 0.0;
 
+    int ileng = 784;
+    int oleng = 10;
     /// pre-train
     for(int iter = 0; iter < 10; ++iter)
     for(int i = 0; i < 100; ++i) {
@@ -244,12 +251,12 @@ void mnistTest()
         for(int j = 0; j < 10; ++j)
             target[j] = 0;
         target[trainLabel[i]] = 1;
-        layer0.feedForward(input,784);
+        layer0.feedForward(input,&ileng);
         layer1.feedForward();
         layer2.feedForward();
         layer3.feedForward();
 
-        layer3.backPropagation(target,10);
+        layer3.backPropagation(target,&oleng);
         layer2.backPropagation();
         layer1.backPropagation();
         layer0.backPropagation();
@@ -274,12 +281,12 @@ void mnistTest()
         for(int j = 0; j < 10; ++j)
             target[j] = 0;
         target[trainLabel[i]] = 1;
-        layer0.feedForward(input,784);
+        layer0.feedForward(input,&ileng);
         layer1.feedForward();
         layer2.feedForward();
         layer3.feedForward();
 
-        layer3.backPropagation(target,10);
+        layer3.backPropagation(target,&oleng);
         layer2.backPropagation();
         layer1.backPropagation();
         layer0.backPropagation();
@@ -304,7 +311,7 @@ void mnistTest()
         for(int j = 0; j < 784; ++j)
             input[j] = testImage[i][j];
 
-        layer0.feedForward(input,784);
+        layer0.feedForward(input,&ileng);
         layer1.feedForward();
         layer2.feedForward();
         layer3.feedForward();
@@ -333,25 +340,136 @@ void mnistTest()
     std::cout<<"MNIST test done"<<std::endl;
 }
 
+void MNISTTestConv()
+{
+    std::cout<<"MNIST test start"<<std::endl;
+    std::vector<std::vector<uint8_t>> trainImage =
+            mnist::read_mnist_image_file("./MNISTSet/train-images-idx3-ubyte");
+    std::vector<std::vector<uint8_t>> testImage =
+            mnist::read_mnist_image_file("./MNISTSet/t10k-images-idx3-ubyte");
+    std::vector<uint8_t>    trainLabel =
+            mnist::read_mnist_label_file("./MNISTSet/train-labels-idx1-ubyte");
+    std::vector<uint8_t>    testLabel =
+            mnist::read_mnist_label_file("./MNISTSet/t10k-labels-idx1-ubyte");
+
+    std::cout<<"the number of train set = "<<trainImage.size()<<std::endl;
+    std::cout<<"the number of test set  = "<<testImage.size()<<std::endl;
+
+    CNN<Sigmoid>    layer0;
+    CNN<Sigmoid>    layer1;
+
+    double input[784];
+    double target[10];
+    double average = 0.0;
+
+    int filterSize[3] = {3,3,1};
+    layer0.setRoll(CNN<Sigmoid>::R_CONVOLUTION);
+    layer0.setIDim(28,28,1);
+    layer0.init(784,64);
+    layer0.initCNN(2,1,1,filterSize,1,1);
+
+    int poolingSize[3] = {2,2,1};
+    layer1.setRoll(CNN<Sigmoid>::R_POOLING);
+    layer1.setPoolingType(CNN<Sigmoid>::P_MAX);
+    layer1.setIDim(28,28,1);
+    layer1.init(784,196);
+    layer1.initCNN(2,1,2,poolingSize,1,0);
+
+//    int ileng = 784;
+//    int oleng = 10;
+
+    /// train
+    for(int i = 0; i < 1; ++i) {
+        for(int j = 0; j < 784; ++j)
+            input[j] = trainImage[i][j];
+        for(int j = 0; j < 10; ++j)
+            target[j] = 0;
+        target[trainLabel[i]] = 1;
+        layer0.feedForward(input,NULL);
+        layer1.feedForward(input,NULL);
+    }
+
+    std::cout<<"layer output "<<layer0.getOutput().size()<<std::endl;
+    std::cout<<"layer dim info = "<<layer0.getiwhd()[0]<<" "<<layer0.getiwhd()[1]<<" "<<layer0.getiwhd()[2]<<std::endl;
+    std::cout<<"layer dim info = "<<layer0.getfwhd()[0]<<" "<<layer0.getfwhd()[1]<<" "<<layer0.getfwhd()[2]<<std::endl;
+    std::cout<<"layer dim info = "<<layer0.getowhd()[0]<<" "<<layer0.getowhd()[1]<<" "<<layer0.getowhd()[2]<<std::endl;
+    int dim = 28;
+    for(int i = 0; i < dim; ++i) {
+        for(int j = 0; j < dim; ++j) {
+            std::cout<<layer0.getOutput()[j + i * dim]<<" ";
+        }
+        std::cout<<std::endl;
+    }
+    std::cout<<std::endl;
+    std::cout<<"pooling output"<<std::endl;
+    int dim2 = 14;
+    for(int i = 0; i < dim2; ++i) {
+        for(int j = 0; j < dim2; ++j) {
+            std::cout<<layer1.getOutput()[j + i * dim2]<<" ";
+        }
+        std::cout<<std::endl;
+    }
+
+
+//    int count = 0;
+//    /// test
+//    for(int i = 0; i < testImage.size(); ++i) {
+//        for(int j = 0; j < 784; ++j)
+//            input[j] = testImage[i][j];
+
+//        layer0.feedForward(input,&ileng);
+//        layer1.feedForward();
+//        layer2.feedForward();
+//        layer3.feedForward();
+
+//        int max = -1;
+//        double maxval = 0.0;
+//        for(int j = 0; j < 10; ++j) {
+//            if(maxval < layer3.getOutput()[j]) {
+//                maxval = layer3.getOutput()[j];
+//                max = j;
+//            }
+//        }
+
+//        std::cout<<max<<" "<<(int)testLabel[i];
+//        if(max == (int)testLabel[i]) {
+//            std::cout<<"  Correct"<<std::endl;
+//            count++;
+//        }
+//        else                 std::cout<<"  FAIL"<<std::endl;
+//    }
+
+//    std::cout<<"Accuracy = "<<(double)count / testImage.size() * 100.0<<"%"<<std::endl;
+
+
+
+//    std::cout<<"MNIST test done"<<std::endl;
+}
+
 int main(int argc, char *argv[])
 {
 
     __cilkrts_set_param("nworkers","4");
     std::cout<<"Hello Neural Network!"<<std::endl;
 
-    /// test Train
-    {
-        trainTest();
-    }
+//    /// test Train
+//    {
+//        trainTest();
+//    }
 
-    /// test multi layer train
-    {
-        multiLayerTrain();
-    }
+//    /// test multi layer train
+//    {
+//        multiLayerTrain();
+//    }
 
-    /// test MNIST
+//    /// test MNIST
+//    {
+//        mnistTest();
+//    }
+
+    /// test CNN
     {
-        mnistTest();
+        MNISTTestConv();
     }
 
     return 0;

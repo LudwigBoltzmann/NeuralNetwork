@@ -4,7 +4,6 @@
 #include "Type.hpp"
 #include "ActivationFunction.hpp"
 #include "LossFunctions.hpp"
-#include "GradientDescent.hpp"
 
 namespace DeepLearning
 {
@@ -74,9 +73,9 @@ public:
     void init(int nInput, int nOutput);
     double loss(int N, double* x, double* target);
 
-    virtual void feedForward(double* input, int N) = 0;
+    virtual void feedForward(double* input, int* N) = 0;
     virtual void feedForward() = 0;
-    virtual void backPropagation(double* target, int N) = 0;
+    virtual void backPropagation(double* target, int* N) = 0;
     virtual void backPropagation() = 0;
     virtual void updateWeights() = 0;
 };

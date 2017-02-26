@@ -14,6 +14,60 @@ namespace DeepLearning
 {
     // columnwise template matrix class
     template <typename type>
+    class tensor
+    {
+    public:
+        typedef std::vector<type> typeVec;
+    private:
+        typeVec m_data;
+        int     m_nheight;
+        int     m_nwidth;
+        int     m_ndepth;
+        int     m_nchannel;
+
+    public:
+        tensor()
+            : m_data(),
+              m_nwidth(0),
+              m_nheight(0),
+              m_ndepth(0),
+              m_nchannel(0)
+        {}
+
+        tensor(int nheight, int nwidth, int ndepth, int nchannel)
+            : m_data(nwidth * nheight * ndepth * nchannel),
+              m_nwidth(nwidth),
+              m_nheight(nheight),
+              m_ndepth(ndepth),
+              m_nchannel(nchannel)
+        {}
+
+        typeVec&    data(void)      { return m_data; }
+        int         nrow(void)      { return m_nrow; }
+        int         ncol(void)      { return m_ncol; }
+        int         ndepth(void)    { return m_ndepth; }
+        int         nchannel(void)  { return m_nchannel; }
+
+        void        resize(int nwidth, int nheight, int ndepth, int nchannel) {
+            m_data.resize(nrow * ncol * ndepth * nchannel);
+            m_nwidth = nwidth;
+            m_nheight = nheight;
+            m_ndepth = ndepth;
+            m_nchannel = nchannel;
+        }
+
+        type& operator()(int width, int height, int depth, int channel)
+        {
+            return *(m_data.data()
+                     + channel * m_nwidth * m_nheight * m_ndepth
+                     + depth * m_nwidth * m_nheight
+                     + height * m_nwidth
+                     + width);
+        }
+    };
+
+    // columnwise template matrix class
+    template <typename type>
     class mat
     {
     public:
@@ -55,10 +109,13 @@ namespace DeepLearning
         }
     };
 
+
     typedef std::vector<double> rVec;
     typedef mat<double>         rMat;
+    typedef tensor<double>      rTen;
     typedef std::vector<int>    iVec;
     typedef mat<int>            iMat;
+    typedef tensor<int>         iTen;
 }
 
 #endif // TYPE_H

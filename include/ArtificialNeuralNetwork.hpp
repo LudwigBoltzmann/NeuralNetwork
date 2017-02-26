@@ -12,16 +12,16 @@ public:
     ANN() : PrimitiveLayer() {}
     ANN(int nInput, int nOutput) : PrimitiveLayer(nInput, nOutput) {}
 
-    void feedForward(double* input, int N);
+    void feedForward(double* input, int* N);
     void feedForward();
-    void backPropagation(double* target, int N);
+    void backPropagation(double* target, int* N);
     void backPropagation();
     void updateWeights();
 };
 
 template <typename AF>
-void ANN<AF>::feedForward(double* input, int N) {
-    m_input.assign(input, input + N);
+void ANN<AF>::feedForward(double* input, int* N) {
+    m_input.assign(input, input + *N);
 
     cilk_for(int i = 0; i < m_numOutput; ++i) {
         double output = 0.0;
@@ -54,10 +54,10 @@ void ANN<AF>::feedForward() {
 
 
 template <typename AF>
-void ANN<AF>::backPropagation(double* target, int N)
+void ANN<AF>::backPropagation(double* target, int* N)
 {
     if(m_postLayer == NULL) {
-        for(int i = 0; i < N; ++i)
+        for(int i = 0; i < *N; ++i)
             m_delta[i] = target[i] - m_output[i];
     } else {
         backPropagation();
