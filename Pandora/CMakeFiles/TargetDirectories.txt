@@ -1,0 +1,3 @@
+/home/darklycos/Project/Pandora/CMakeFiles/edit_cache.dir
+/home/darklycos/Project/Pandora/CMakeFiles/rebuild_cache.dir
+/home/darklycos/Project/Pandora/CMakeFiles/test/testPandora.dir
